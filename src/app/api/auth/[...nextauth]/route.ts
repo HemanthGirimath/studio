@@ -15,16 +15,12 @@ declare module 'next-auth/jwt' {
   }
 }
 
-const useSecureCookies = process.env.AUTH_URL?.startsWith('https://') ?? false;
-const cookiePrefix = useSecureCookies ? '__Secure-' : '';
-
 export const {
   handlers: { GET, POST },
   auth,
   signIn,
   signOut,
 } = NextAuth({
-  trustHost: true,
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
@@ -49,36 +45,6 @@ export const {
     async session({ session, token }) {
       session.accessToken = token.accessToken;
       return session;
-    },
-  },
-  cookies: {
-    // Required for cross-domain iframe support
-    csrfToken: {
-      name: `${cookiePrefix}authjs.csrf-token`,
-      options: {
-        httpOnly: true,
-        sameSite: 'none',
-        path: '/',
-        secure: useSecureCookies,
-      },
-    },
-    pkceCodeVerifier: {
-      name: `${cookiePrefix}authjs.pkce.code_verifier`,
-      options: {
-        httpOnly: true,
-        sameSite: 'none',
-        path: '/',
-        secure: useSecureCookies,
-      },
-    },
-    state: {
-      name: `${cookiePrefix}authjs.state`,
-      options: {
-        httpOnly: true,
-        sameSite: 'none',
-        path: '/',
-        secure: useSecureCookies,
-      },
     },
   },
 });
