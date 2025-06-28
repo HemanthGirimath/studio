@@ -54,17 +54,17 @@ function getHeader(headers: gmail_v1.Schema$MessagePartHeader[], name: string): 
 }
 
 export async function fetchEmails(): Promise<Email[]> {
-    const session = await auth();
-    if (!session?.accessToken) {
-        console.log("No access token found in session.");
-        return [];
-    }
-
-    const oAuth2Client = new google.auth.OAuth2();
-    oAuth2Client.setCredentials({ access_token: session.accessToken });
-    const gmail = google.gmail({ version: 'v1', auth: oAuth2Client });
-
     try {
+        const session = await auth();
+        if (!session?.accessToken) {
+            console.log("No access token found in session.");
+            return [];
+        }
+
+        const oAuth2Client = new google.auth.OAuth2();
+        oAuth2Client.setCredentials({ access_token: session.accessToken });
+        const gmail = google.gmail({ version: 'v1', auth: oAuth2Client });
+
         const response = await gmail.users.messages.list({
             userId: 'me',
             maxResults: 30,
@@ -119,7 +119,11 @@ export async function fetchEmails(): Promise<Email[]> {
         const emails = (await Promise.all(emailPromises)).filter(Boolean) as Email[];
         return emails.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     } catch (error) {
-        console.error('Failed to fetch emails:', error);
+        console.error('An error occurred in fetchEmails:', error);
+        if (error instanceof Error) {
+            console.error('Error name:', error.name);
+            console.error('Error message:', error.message);
+        }
         return [];
     }
 }
