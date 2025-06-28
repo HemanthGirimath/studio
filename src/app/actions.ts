@@ -1,7 +1,6 @@
 'use server';
 
 import { auth } from '@/app/api/auth/[...nextauth]/route';
-import { google } from 'googleapis';
 import type { gmail_v1 } from 'googleapis';
 
 export type Email = {
@@ -60,39 +59,45 @@ export async function fetchEmails(): Promise<Email[]> {
             console.log("No access token found in session.");
             return [];
         }
+        const accessToken = session.accessToken;
+        const headers = { Authorization: `Bearer ${accessToken}` };
 
-        const oAuth2Client = new google.auth.OAuth2();
-        oAuth2Client.setCredentials({ access_token: session.accessToken });
-        const gmail = google.gmail({ version: 'v1', auth: oAuth2Client });
+        // 1. Get list of message IDs
+        const listResponse = await fetch('https://www.googleapis.com/gmail/v1/users/me/messages?maxResults=30&q=in:inbox%20newer_than:1d', { headers });
 
-        const response = await gmail.users.messages.list({
-            userId: 'me',
-            maxResults: 30,
-            q: 'in:inbox newer_than:1d'
-        });
+        if (!listResponse.ok) {
+            const errorData = await listResponse.json();
+            console.error('Failed to fetch email list:', listResponse.status, errorData);
+            return [];
+        }
+        const listData = await listResponse.json();
+        const messages = listData.messages || [];
 
-        const messages = response.data.messages || [];
         if (!messages.length) {
             console.log('No new messages found.');
             return [];
         }
 
-        const emailPromises = messages.map(async (message) => {
+        // 2. Fetch each message
+        const emailPromises = messages.map(async (message: { id: string }) => {
             if (!message.id) return null;
-            const msgResponse = await gmail.users.messages.get({
-                userId: 'me',
-                id: message.id,
-                format: 'full'
-            });
+            const msgResponse = await fetch(`https://www.googleapis.com/gmail/v1/users/me/messages/${message.id}?format=full`, { headers });
+            
+            if (!msgResponse.ok) {
+                console.error(`Failed to fetch email ${message.id}:`, msgResponse.status);
+                return null;
+            }
+            const msgData: gmail_v1.Schema$Message = await msgResponse.json();
 
-            const { payload, id, internalDate } = msgResponse.data;
+            // 3. Parse the message data
+            const { payload, id, internalDate } = msgData;
             if (!payload?.headers || !id || !internalDate) return null;
 
-            const headers = payload.headers;
-            const from = getHeader(headers, 'From');
-            const to = getHeader(headers, 'To');
-            const subject = getHeader(headers, 'Subject');
-            const isRead = !(msgResponse.data.labelIds?.includes('UNREAD'));
+            const msgHeaders = payload.headers;
+            const from = getHeader(msgHeaders, 'From');
+            const to = getHeader(msgHeaders, 'To');
+            const subject = getHeader(msgHeaders, 'Subject');
+            const isRead = !(msgData.labelIds?.includes('UNREAD'));
 
             let body = '';
             if (payload.parts) {
