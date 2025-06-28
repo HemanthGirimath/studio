@@ -9,8 +9,6 @@ declare module 'next-auth' {
 }
 
 // Augment the JWT to include the accessToken
-import { type JWT } from 'next-auth/jwt';
-
 declare module 'next-auth/jwt' {
   interface JWT {
     accessToken?: string;
@@ -24,6 +22,7 @@ export const {
   signIn,
   signOut,
 } = NextAuth({
+  trustHost: true,
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
