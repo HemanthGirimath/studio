@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useCallback } from "react";
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { Inbox, Send, FileText, Bot, User, BrainCircuit, LogIn, LogOut, Loader, MailWarning } from "lucide-react";
 import {
   SidebarProvider,
@@ -60,6 +60,7 @@ export default function GmailVoiceflow() {
 
 
   const handleVoiceButtonClick = () => {
+    cancelSpeech();
     if (isListening) {
       stopListening();
     } else {
@@ -159,8 +160,10 @@ export default function GmailVoiceflow() {
             <BrainCircuit className="h-12 w-12 text-primary" />
             <h1 className="text-3xl font-bold">Gmail VoiceFlow</h1>
             <p className="text-muted-foreground">Sign in with your Google account to continue</p>
-            <Button onClick={() => signIn('google')}>
-                <LogIn className="mr-2 h-4 w-4" /> Sign in with Google
+            <Button asChild>
+                <a href="/api/auth/signin/google" className="flex items-center gap-2">
+                    <LogIn className="h-4 w-4" /> Sign in with Google
+                </a>
             </Button>
         </div>
     );
