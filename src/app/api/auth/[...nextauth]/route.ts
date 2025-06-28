@@ -1,6 +1,5 @@
 import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
-import type { Provider } from 'next-auth/providers';
 
 // Augment the session to include the accessToken
 declare module 'next-auth' {
