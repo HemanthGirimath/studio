@@ -19,23 +19,26 @@ declare module 'next-auth/jwt' {
 }
 
 
-const providers: Provider[] = [
-  Google({
-    clientId: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    authorization: {
-      params: {
-        prompt: 'consent',
-        access_type: 'offline',
-        response_type: 'code',
-        scope: 'https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/gmail.readonly',
+export const {
+  handlers: { GET, POST },
+  auth,
+  signIn,
+  signOut,
+} = NextAuth({
+  providers: [
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      authorization: {
+        params: {
+          prompt: 'consent',
+          access_type: 'offline',
+          response_type: 'code',
+          scope: 'https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/gmail.readonly',
+        },
       },
-    },
-  }),
-];
-
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  providers,
+    }),
+  ],
   callbacks: {
     async jwt({ token, account }) {
       if (account?.access_token) {
@@ -48,4 +51,5 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return session;
     },
   },
+  secret: process.env.AUTH_SECRET,
 });
