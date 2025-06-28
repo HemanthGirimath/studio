@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useCallback } from "react";
-import { Inbox, Send, FileText, Bot, User, BrainCircuit } from "lucide-react";
+import { useSession, signIn, signOut } from "next-auth/react";
+import { Inbox, Send, FileText, Bot, User, BrainCircuit, LogIn, LogOut, Loader, MailWarning } from "lucide-react";
 import {
   SidebarProvider,
   Sidebar,
@@ -13,7 +14,7 @@ import {
   SidebarInset,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,22 +24,40 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { VoiceButton } from "@/components/voice-button";
 import { useSpeech } from "@/hooks/use-speech";
-import { type Email, emails as initialEmails } from "@/lib/data";
 import { summarizeEmail } from "@/ai/flows/summarize-email";
 import { contextualResponse } from "@/ai/flows/contextual-responses";
 import { cn } from "@/lib/utils";
+import { fetchEmails, type Email } from "@/app/actions";
 
 type EmailCategory = "inbox" | "sent" | "draft";
 
 export default function GmailVoiceflow() {
-  const [emails, setEmails] = useState<Email[]>(initialEmails);
+  const { data: session, status } = useSession();
+  const [emails, setEmails] = useState<Email[]>([]);
+  const [isLoadingEmails, setIsLoadingEmails] = useState(false);
   const [category, setCategory] = useState<EmailCategory>("inbox");
-  const [selectedEmailId, setSelectedEmailId] = useState<string | null>(emails.find(e => e.category === 'inbox')?.id || null);
+  const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [isProcessingCommand, setIsProcessingCommand] = useState(false);
   const [conversationContext, setConversationContext] = useState("");
   const { transcript, isListening, startListening, stopListening, speak, setTranscript, cancelSpeech } = useSpeech();
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+        setIsLoadingEmails(true);
+        fetchEmails()
+            .then(fetchedEmails => {
+                setEmails(fetchedEmails);
+                if (fetchedEmails.length > 0) {
+                    const firstInbox = fetchedEmails.find(e => e.category === 'inbox');
+                    if(firstInbox) setSelectedEmailId(firstInbox.id);
+                }
+            })
+            .finally(() => setIsLoadingEmails(false));
+    }
+  }, [status]);
+
 
   const handleVoiceButtonClick = () => {
     if (isListening) {
@@ -81,10 +100,7 @@ export default function GmailVoiceflow() {
   
   const handleCommand = useCallback(async (command: string) => {
     if (!command) return;
-
-    // Cancel any ongoing speech from a previous command to avoid overlaps.
     cancelSpeech();
-
     const lowerCaseCommand = command.toLowerCase();
 
     const commands: { [key: string]: () => void } = {
@@ -102,7 +118,6 @@ export default function GmailVoiceflow() {
         return;
     }
 
-    // Contextual AI response
     setIsProcessingCommand(true);
     try {
         const contextForAI = selectedEmail ? `Current email context: Subject: ${selectedEmail.subject}, Body: ${selectedEmail.body}\n\n${conversationContext}` : conversationContext;
@@ -115,7 +130,7 @@ export default function GmailVoiceflow() {
     } finally {
         setIsProcessingCommand(false);
     }
-}, [selectedEmail, handleReadAloud, handleSummarize, speak, conversationContext, cancelSpeech]);
+  }, [selectedEmail, handleReadAloud, handleSummarize, speak, conversationContext, cancelSpeech]);
 
   useEffect(() => {
     if (!isListening && transcript) {
@@ -128,6 +143,29 @@ export default function GmailVoiceflow() {
   const unreadCounts = {
     inbox: emails.filter(e => e.category === 'inbox' && !e.read).length,
   };
+
+  if (status === "loading") {
+    return (
+      <div className="flex h-screen w-full items-center justify-center gap-4">
+        <Loader className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-lg text-muted-foreground">Loading Session...</p>
+      </div>
+    );
+  }
+
+  if (status === "unauthenticated") {
+    return (
+        <div className="flex h-screen w-full flex-col items-center justify-center gap-4 bg-background">
+            <BrainCircuit className="h-12 w-12 text-primary" />
+            <h1 className="text-3xl font-bold">Gmail VoiceFlow</h1>
+            <p className="text-muted-foreground">Sign in with your Google account to continue</p>
+            <Button onClick={() => signIn('google')}>
+                <LogIn className="mr-2 h-4 w-4" /> Sign in with Google
+            </Button>
+        </div>
+    );
+  }
+
 
   return (
     <div className="h-screen w-full bg-background text-foreground overflow-hidden">
@@ -149,13 +187,13 @@ export default function GmailVoiceflow() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setCategory("sent")} isActive={category === "sent"} tooltip="Sent">
+                <SidebarMenuButton onClick={() => setCategory("sent")} isActive={category === "sent"} tooltip="Sent" disabled>
                   <Send />
                   <span>Sent</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setCategory("draft")} isActive={category === "draft"} tooltip="Drafts">
+                <SidebarMenuButton onClick={() => setCategory("draft")} isActive={category === "draft"} tooltip="Drafts" disabled>
                   <FileText />
                   <span>Drafts</span>
                 </SidebarMenuButton>
@@ -163,9 +201,14 @@ export default function GmailVoiceflow() {
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>
-            <div className="text-xs text-muted-foreground p-4 text-center">
-              <p>Use your voice to manage emails.</p>
-              <p>Click the mic to start.</p>
+            <div className="flex flex-col gap-2 p-2">
+                <div className="text-xs text-muted-foreground p-2 text-center">
+                <p>Use your voice to manage emails.</p>
+                <p>Click the mic to start.</p>
+                </div>
+                <Button variant="outline" onClick={() => signOut()}>
+                    <LogOut className="mr-2"/> Sign Out
+                </Button>
             </div>
           </SidebarFooter>
         </Sidebar>
@@ -177,34 +220,46 @@ export default function GmailVoiceflow() {
                 <h2 className="text-2xl font-bold capitalize">{category}</h2>
               </div>
               <ScrollArea className="flex-1">
-                <div className="flex flex-col gap-2 p-2">
-                  {filteredEmails.map((email) => (
-                    <Card
-                      key={email.id}
-                      onClick={() => handleSelectEmail(email.id)}
-                      className={cn(
-                        "cursor-pointer transition-all duration-200 hover:shadow-md",
-                        selectedEmailId === email.id ? "border-primary bg-primary/5" : "bg-card"
-                      )}
-                    >
-                      <CardHeader className="p-4">
-                        <div className="flex items-center gap-3">
-                           <div className="relative">
+                {isLoadingEmails ? (
+                    <div className="p-2 space-y-2">
+                        {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
+                    </div>
+                ) : filteredEmails.length > 0 ? (
+                    <div className="flex flex-col gap-2 p-2">
+                    {filteredEmails.map((email) => (
+                        <Card
+                        key={email.id}
+                        onClick={() => handleSelectEmail(email.id)}
+                        className={cn(
+                            "cursor-pointer transition-all duration-200 hover:shadow-md",
+                            selectedEmailId === email.id ? "border-primary bg-primary/5" : "bg-card"
+                        )}
+                        >
+                        <CardHeader className="p-4">
+                            <div className="flex items-center gap-3">
+                            <div className="relative">
                                 <Avatar>
                                     <AvatarFallback>{email.from.charAt(0)}</AvatarFallback>
                                 </Avatar>
                                 {!email.read && <span className="absolute top-0 right-0 block h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-card" />}
                             </div>
-                          <div className="flex-1 overflow-hidden">
-                            <p className="font-semibold truncate">{email.from}</p>
-                            <p className="text-sm text-muted-foreground truncate">{email.subject}</p>
-                          </div>
-                          <time suppressHydrationWarning className="text-xs text-muted-foreground self-start">{email.date === 'Draft' ? 'Draft' : new Date(email.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time>
-                        </div>
-                      </CardHeader>
-                    </Card>
-                  ))}
-                </div>
+                            <div className="flex-1 overflow-hidden">
+                                <p className="font-semibold truncate">{email.from}</p>
+                                <p className="text-sm text-muted-foreground truncate">{email.subject}</p>
+                            </div>
+                            <time suppressHydrationWarning className="text-xs text-muted-foreground self-start">{new Date(email.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time>
+                            </div>
+                        </CardHeader>
+                        </Card>
+                    ))}
+                    </div>
+                ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-4">
+                        <MailWarning className="h-10 w-10 mb-2" />
+                        <p className="font-semibold">No emails found</p>
+                        <p className="text-sm">No new emails in the last day.</p>
+                    </div>
+                )}
               </ScrollArea>
             </aside>
             <main className="flex-1 h-full flex flex-col">
@@ -221,7 +276,7 @@ export default function GmailVoiceflow() {
                           <span>{selectedEmail.from}</span>
                         </div>
                         <Separator orientation="vertical" className="h-4" />
-                        <time suppressHydrationWarning>{selectedEmail.date === 'Draft' ? 'Draft' : new Date(selectedEmail.date).toLocaleString()}</time>
+                        <time suppressHydrationWarning>{new Date(selectedEmail.date).toLocaleString()}</time>
                       </div>
                     </header>
                     <Separator />
