@@ -48,4 +48,9 @@ export const config: NextAuthConfig = {
   // The secret is read automatically from the AUTH_SECRET environment variable.
 };
 
-export const { handlers, auth, signIn, signOut } = NextAuth(config);
+export const {
+  handlers: { GET, POST },
+  auth,
+  signIn,
+  signOut,
+} = NextAuth(config);
