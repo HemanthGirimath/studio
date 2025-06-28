@@ -195,7 +195,7 @@ export default function GmailVoiceflow() {
                             <p className="font-semibold truncate">{email.from}</p>
                             <p className="text-sm text-muted-foreground truncate">{email.subject}</p>
                           </div>
-                          <time className="text-xs text-muted-foreground self-start">{new Date(email.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time>
+                          <time suppressHydrationWarning className="text-xs text-muted-foreground self-start">{email.date === 'Draft' ? 'Draft' : new Date(email.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time>
                         </div>
                       </CardHeader>
                     </Card>
@@ -217,7 +217,7 @@ export default function GmailVoiceflow() {
                           <span>{selectedEmail.from}</span>
                         </div>
                         <Separator orientation="vertical" className="h-4" />
-                        <time>{new Date(selectedEmail.date).toLocaleString()}</time>
+                        <time suppressHydrationWarning>{selectedEmail.date === 'Draft' ? 'Draft' : new Date(selectedEmail.date).toLocaleString()}</time>
                       </div>
                     </header>
                     <Separator />
