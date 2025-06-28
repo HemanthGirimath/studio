@@ -38,7 +38,7 @@ export default function GmailVoiceflow() {
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [isProcessingCommand, setIsProcessingCommand] = useState(false);
   const [conversationContext, setConversationContext] = useState("");
-  const { transcript, isListening, startListening, stopListening, speak, setTranscript } = useSpeech();
+  const { transcript, isListening, startListening, stopListening, speak, setTranscript, cancelSpeech } = useSpeech();
 
   const handleVoiceButtonClick = () => {
     if (isListening) {
@@ -81,13 +81,17 @@ export default function GmailVoiceflow() {
   
   const handleCommand = useCallback(async (command: string) => {
     if (!command) return;
+
+    // Cancel any ongoing speech from a previous command to avoid overlaps.
+    cancelSpeech();
+
     const lowerCaseCommand = command.toLowerCase();
 
     const commands: { [key: string]: () => void } = {
         'inbox': () => { setCategory('inbox'); speak("Showing inbox."); },
         'received': () => { setCategory('inbox'); speak("Showing received emails."); },
         'sent': () => { setCategory('sent'); speak("Showing sent emails."); },
-        'drafts': () => { setCategory('drafts'); speak("Showing drafts."); },
+        'drafts': () => { setCategory('draft'); speak("Showing drafts."); },
         'read': () => selectedEmail && handleReadAloud(selectedEmail),
         'summarize': () => selectedEmail && handleSummarize(selectedEmail),
     };
@@ -111,7 +115,7 @@ export default function GmailVoiceflow() {
     } finally {
         setIsProcessingCommand(false);
     }
-}, [selectedEmail, handleReadAloud, handleSummarize, speak, conversationContext]);
+}, [selectedEmail, handleReadAloud, handleSummarize, speak, conversationContext, cancelSpeech]);
 
   useEffect(() => {
     if (!isListening && transcript) {

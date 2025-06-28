@@ -13,6 +13,12 @@ export function useSpeech() {
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
+  const cancelSpeech = useCallback(() => {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+  }, []);
+
   useEffect(() => {
     const SpeechRecognition = (window as CustomWindow).SpeechRecognition || (window as CustomWindow).webkitSpeechRecognition;
     if (SpeechRecognition) {
@@ -46,8 +52,9 @@ export function useSpeech() {
 
     return () => {
       recognitionRef.current?.stop();
+      cancelSpeech();
     };
-  }, []);
+  }, [cancelSpeech]);
 
   const startListening = useCallback(() => {
     if (recognitionRef.current && !isListening) {
@@ -76,5 +83,5 @@ export function useSpeech() {
     }
   }, []);
 
-  return { transcript, isListening, startListening, stopListening, speak, setTranscript };
+  return { transcript, isListening, startListening, stopListening, speak, setTranscript, cancelSpeech };
 }
