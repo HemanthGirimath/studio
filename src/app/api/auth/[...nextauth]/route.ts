@@ -15,6 +15,8 @@ declare module 'next-auth/jwt' {
   }
 }
 
+const useSecureCookies = process.env.AUTH_URL?.startsWith('https://') ?? false;
+const cookiePrefix = useSecureCookies ? '__Secure-' : '';
 
 export const {
   handlers: { GET, POST },
@@ -31,7 +33,8 @@ export const {
         params: {
           prompt: 'consent',
           access_type: 'offline',
-          scope: 'https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/gmail.readonly',
+          scope:
+            'https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/gmail.readonly',
         },
       },
     }),
@@ -46,6 +49,36 @@ export const {
     async session({ session, token }) {
       session.accessToken = token.accessToken;
       return session;
+    },
+  },
+  cookies: {
+    // Required for cross-domain iframe support
+    csrfToken: {
+      name: `${cookiePrefix}authjs.csrf-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'none',
+        path: '/',
+        secure: useSecureCookies,
+      },
+    },
+    pkceCodeVerifier: {
+      name: `${cookiePrefix}authjs.pkce.code_verifier`,
+      options: {
+        httpOnly: true,
+        sameSite: 'none',
+        path: '/',
+        secure: useSecureCookies,
+      },
+    },
+    state: {
+      name: `${cookiePrefix}authjs.state`,
+      options: {
+        httpOnly: true,
+        sameSite: 'none',
+        path: '/',
+        secure: useSecureCookies,
+      },
     },
   },
 });
