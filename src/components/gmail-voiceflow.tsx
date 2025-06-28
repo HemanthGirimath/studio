@@ -27,7 +27,8 @@ import { useSpeech } from "@/hooks/use-speech";
 import { summarizeEmail } from "@/ai/flows/summarize-email";
 import { contextualResponse } from "@/ai/flows/contextual-responses";
 import { cn } from "@/lib/utils";
-import { fetchEmails, type Email } from "@/app/actions";
+import { fetchEmails } from "@/app/actions";
+import type { Email } from "@/app/types";
 
 type EmailCategory = "inbox" | "sent" | "draft";
 

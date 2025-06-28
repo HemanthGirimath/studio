@@ -1,19 +1,7 @@
 'use server';
 
 import { auth } from '@/app/api/auth/[...nextauth]/route';
-import type { gmail_v1 } from 'googleapis';
-
-export type Email = {
-  id: string;
-  from: string;
-  to: string;
-  subject: string;
-  body: string;
-  date: string;
-  category: 'inbox' | 'sent' | 'draft';
-  read: boolean;
-};
-
+import type { Email } from '@/app/types';
 
 // Helper to decode base64url
 function base64UrlDecode(data: string) {
@@ -25,7 +13,7 @@ function base64UrlDecode(data: string) {
 }
 
 // Helper to parse the from header
-function getHeader(headers: gmail_v1.Schema$MessagePartHeader[], name: string): string {
+function getHeader(headers: any[], name: string): string {
     const header = headers.find((h) => h.name === name);
     // Decode RFC 2047 encoded strings
     if (header?.value) {
@@ -87,7 +75,7 @@ export async function fetchEmails(): Promise<Email[]> {
                 console.error(`Failed to fetch email ${message.id}:`, msgResponse.status);
                 return null;
             }
-            const msgData: gmail_v1.Schema$Message = await msgResponse.json();
+            const msgData: any = await msgResponse.json();
 
             // 3. Parse the message data
             const { payload, id, internalDate } = msgData;
