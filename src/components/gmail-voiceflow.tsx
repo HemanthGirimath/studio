@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useCallback } from "react";
-import { useSession, signOut } from "next-auth/react";
 import { Inbox, Send, FileText, Bot, User, BrainCircuit, LogIn, LogOut, Loader, MailWarning } from "lucide-react";
 import {
   SidebarProvider,
@@ -27,13 +26,16 @@ import { useSpeech } from "@/hooks/use-speech";
 import { summarizeEmail } from "@/ai/flows/summarize-email";
 import { contextualResponse } from "@/ai/flows/contextual-responses";
 import { cn } from "@/lib/utils";
-import { fetchEmails } from "@/app/actions";
+import { fetchEmails, signOutAction } from "@/app/actions";
 import type { Email } from "@/app/types";
 
 type EmailCategory = "inbox" | "sent" | "draft";
 
-export default function GmailVoiceflow() {
-  const { data: session, status } = useSession();
+type GmailVoiceflowProps = {
+    isAuthenticated: boolean;
+}
+
+export default function GmailVoiceflow({ isAuthenticated }: GmailVoiceflowProps) {
   const [emails, setEmails] = useState<Email[]>([]);
   const [isLoadingEmails, setIsLoadingEmails] = useState(false);
   const [category, setCategory] = useState<EmailCategory>("inbox");
@@ -45,7 +47,7 @@ export default function GmailVoiceflow() {
   const { transcript, isListening, startListening, stopListening, speak, setTranscript, cancelSpeech } = useSpeech();
 
   useEffect(() => {
-    if (status === 'authenticated') {
+    if (isAuthenticated) {
         setIsLoadingEmails(true);
         fetchEmails()
             .then(fetchedEmails => {
@@ -57,7 +59,7 @@ export default function GmailVoiceflow() {
             })
             .finally(() => setIsLoadingEmails(false));
     }
-  }, [status]);
+  }, [isAuthenticated]);
 
 
   const handleVoiceButtonClick = () => {
@@ -146,23 +148,14 @@ export default function GmailVoiceflow() {
     inbox: emails.filter(e => e.category === 'inbox' && !e.read).length,
   };
 
-  if (status === "loading") {
-    return (
-      <div className="flex h-screen w-full items-center justify-center gap-4">
-        <Loader className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-lg text-muted-foreground">Loading Session...</p>
-      </div>
-    );
-  }
-
-  if (status === "unauthenticated") {
+  if (!isAuthenticated) {
     return (
         <div className="flex h-screen w-full flex-col items-center justify-center gap-4 bg-background">
             <BrainCircuit className="h-12 w-12 text-primary" />
             <h1 className="text-3xl font-bold">Gmail VoiceFlow</h1>
             <p className="text-muted-foreground">Sign in with your Google account to continue</p>
             <Button asChild>
-                <a href="/api/auth/signin/google" className="flex items-center gap-2">
+                <a href="/api/auth/google/login" className="flex items-center gap-2">
                     <LogIn className="h-4 w-4" /> Sign in with Google
                 </a>
             </Button>
@@ -210,9 +203,11 @@ export default function GmailVoiceflow() {
                 <p>Use your voice to manage emails.</p>
                 <p>Click the mic to start.</p>
                 </div>
-                <Button variant="outline" onClick={() => signOut()}>
-                    <LogOut className="mr-2"/> Sign Out
-                </Button>
+                <form action={signOutAction}>
+                  <Button variant="outline" type="submit" className="w-full">
+                      <LogOut className="mr-2"/> Sign Out
+                  </Button>
+                </form>
             </div>
           </SidebarFooter>
         </Sidebar>

@@ -1,7 +1,9 @@
 'use server';
 
-import { auth } from '@/auth';
 import type { Email } from '@/app/types';
+import { getSession } from '@/lib/session';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 
 // Helper to decode base64url
 function base64UrlDecode(data: string) {
@@ -41,21 +43,25 @@ function getHeader(headers: any[], name: string): string {
 }
 
 export async function fetchEmails(): Promise<Email[]> {
+    const session = await getSession();
+    if (!session?.accessToken) {
+        console.log("No access token found in session.");
+        return [];
+    }
+    const accessToken = session.accessToken;
+    const headers = { Authorization: `Bearer ${accessToken}` };
+    
     try {
-        const session = await auth();
-        if (!session?.accessToken) {
-            console.log("No access token found in session.");
-            return [];
-        }
-        const accessToken = session.accessToken;
-        const headers = { Authorization: `Bearer ${accessToken}` };
-
         // 1. Get list of message IDs
         const listResponse = await fetch('https://www.googleapis.com/gmail/v1/users/me/messages?maxResults=30&q=in:inbox%20newer_than:1d', { headers });
 
         if (!listResponse.ok) {
             const errorData = await listResponse.json();
             console.error('Failed to fetch email list:', listResponse.status, errorData);
+            if (listResponse.status === 401) {
+                // Token likely expired, clear session and force re-login
+                await signOutAction();
+            }
             return [];
         }
         const listData = await listResponse.json();
@@ -119,4 +125,9 @@ export async function fetchEmails(): Promise<Email[]> {
         }
         return [];
     }
+}
+
+export async function signOutAction() {
+    cookies().delete('session');
+    redirect('/');
 }
