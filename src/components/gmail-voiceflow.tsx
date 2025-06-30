@@ -51,12 +51,14 @@ export default function GmailVoiceflow({ isAuthenticated }: GmailVoiceflowProps)
       setIsLoadingEmails(true);
       fetchEmails()
         .then(response => {
+          if (response.error === 'unauthorized') {
+            // A full page reload will correctly handle the sign-out and redirect.
+            window.location.href = '/';
+            return;
+          }
           if (response.error) {
             console.error("Error fetching emails:", response.error);
-            // Unauthorized or other fetch error, force a sign out/reload on the client.
-            // Using window.location.href ensures a full page reload, which will
-            // clear all state and re-evaluate authentication status.
-            window.location.href = '/';
+            // Handle other errors if necessary, e.g., show a toast notification
             return;
           }
 
@@ -70,7 +72,7 @@ export default function GmailVoiceflow({ isAuthenticated }: GmailVoiceflowProps)
         })
         .catch(err => {
           console.error("An unexpected error occurred while fetching emails:", err);
-          window.location.href = '/';
+           window.location.href = '/';
         })
         .finally(() => setIsLoadingEmails(false));
     }
@@ -170,7 +172,7 @@ export default function GmailVoiceflow({ isAuthenticated }: GmailVoiceflowProps)
             <h1 className="text-3xl font-bold">Gmail VoiceFlow</h1>
             <p className="text-muted-foreground">Sign in with your Google account to continue</p>
             <Button asChild>
-                <a href="/api/auth/google/login" className="flex items-center gap-2">
+                <a href="/api/auth/google/login" className="flex items-center gap-2" target="_top">
                     <LogIn className="h-4 w-4" /> Sign in with Google
                 </a>
             </Button>
