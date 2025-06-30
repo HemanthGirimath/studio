@@ -10,13 +10,21 @@ export async function GET(request: NextRequest) {
   if (!code) {
     // Handle error: No code provided
     console.error('No code provided by Google');
-    return redirect('/?error=auth_failed');
+    return redirect('/?error=auth_failed_no_code');
   }
 
+  const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, AUTH_URL } = process.env;
+
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !AUTH_URL) {
+    throw new Error('Missing Google OAuth environment variables. Please check GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and AUTH_URL in your .env file.');
+  }
+
+  const redirectURI = `${AUTH_URL}/api/auth/google/callback`;
+
   const oauth2Client = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    `${process.env.AUTH_URL}/api/auth/google/callback`
+    GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET,
+    redirectURI
   );
 
   try {
@@ -30,6 +38,6 @@ export async function GET(request: NextRequest) {
     return redirect('/');
   } catch (error) {
     console.error('Failed to exchange code for token:', error);
-    return redirect('/?error=auth_failed');
+    return redirect('/?error=auth_failed_token_exchange');
   }
 }

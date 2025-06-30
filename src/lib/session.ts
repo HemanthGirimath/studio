@@ -7,6 +7,11 @@ interface SessionPayload extends JWTPayload {
 }
 
 const secretKey = process.env.AUTH_SECRET;
+
+if (!secretKey) {
+    throw new Error('AUTH_SECRET environment variable is not set. Please add it to your .env file.');
+}
+
 const key = new TextEncoder().encode(secretKey);
 
 export async function encrypt(payload: SessionPayload) {

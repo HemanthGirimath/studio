@@ -1,11 +1,20 @@
 import { google } from 'googleapis';
 import { redirect } from 'next/navigation';
+import type { NextRequest } from 'next/server';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, AUTH_URL } = process.env;
+
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !AUTH_URL) {
+    throw new Error('Missing Google OAuth environment variables. Please check GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and AUTH_URL in your .env file.');
+  }
+  
+  const redirectURI = `${AUTH_URL}/api/auth/google/callback`;
+
   const oauth2Client = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    `${process.env.AUTH_URL}/api/auth/google/callback`
+    GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET,
+    redirectURI
   );
 
   const scopes = [
