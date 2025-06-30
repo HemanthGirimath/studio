@@ -161,6 +161,19 @@ export default function GmailVoiceflow({ isAuthenticated, authorizationUrl }: Gm
     }
   }, [isListening, transcript, handleCommand, setTranscript]);
 
+  const handleSignIn = () => {
+    const popup = window.open(authorizationUrl, '_blank', 'noopener,noreferrer,width=500,height=600');
+    if (popup) {
+      const timer = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(timer);
+          // The popup has been closed, reload the main page to check the session
+          window.location.reload();
+        }
+      }, 500); // Check every 500ms
+    }
+  };
+
   const filteredEmails = emails.filter((email) => email.category === category);
   const unreadCounts = {
     inbox: emails.filter(e => e.category === 'inbox' && !e.read).length,
@@ -174,7 +187,7 @@ export default function GmailVoiceflow({ isAuthenticated, authorizationUrl }: Gm
             <p className="text-muted-foreground">Sign in with your Google account to continue</p>
             {authorizationUrl ? (
                 <Button
-                    onClick={() => window.open(authorizationUrl, '_blank', 'noopener,noreferrer,width=500,height=600')}
+                    onClick={handleSignIn}
                     className="flex items-center gap-2"
                 >
                     <LogIn className="h-4 w-4" /> Sign in with Google

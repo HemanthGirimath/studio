@@ -40,19 +40,9 @@ export async function GET(request: NextRequest) {
         <head>
           <title>Authentication Successful</title>
           <script>
-            try {
-              if (window.opener && !window.opener.closed) {
-                // Force a hard reload on the main window to ensure it fetches the new session
-                window.opener.location.reload(true);
-                // Close this popup after a short delay
-                setTimeout(() => window.close(), 500);
-              } else {
-                 document.body.innerHTML = '<h1>Authentication successful! Please return to the main app window.</h1>';
-              }
-            } catch (e) {
-              console.error('Error refreshing opener:', e);
-              document.body.innerHTML = '<h1>Authentication successful! Please close this tab and refresh the main app window manually.</h1>';
-            }
+            // The main window is polling for this window to close.
+            // All we need to do is close it.
+            window.close();
           </script>
         </head>
         <body>
