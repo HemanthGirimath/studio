@@ -53,13 +53,11 @@ export default function GmailVoiceflow({ isAuthenticated, authorizationUrl }: Gm
       fetchEmails()
         .then(response => {
           if (response.error === 'unauthorized') {
-            // A full page reload will correctly handle the sign-out and redirect.
             window.location.href = '/';
             return;
           }
           if (response.error) {
             console.error("Error fetching emails:", response.error);
-            // Handle other errors if necessary, e.g., show a toast notification
             return;
           }
 
@@ -165,18 +163,20 @@ export default function GmailVoiceflow({ isAuthenticated, authorizationUrl }: Gm
     const popup = window.open(authorizationUrl, '_blank', 'noopener,noreferrer,width=500,height=600');
     if (popup) {
       const timer = setInterval(() => {
-        if (popup.closed) {
-          clearInterval(timer);
-          // The popup has been closed, reload the main page to check the session
-          window.location.reload();
+        try {
+          if (popup.closed) {
+            clearInterval(timer);
+            // Force a hard navigation to the root of the site.
+            // This is more reliable than reload() in an iframe.
+            window.location.href = '/';
+          }
+        } catch (error) {
+          // This error is expected when the popup navigates to a cross-origin domain (Google).
+          // We can safely ignore it and continue polling. The `popup.closed` check will
+          // work correctly once the popup has actually closed.
         }
       }, 500); // Check every 500ms
     }
-  };
-
-  const filteredEmails = emails.filter((email) => email.category === category);
-  const unreadCounts = {
-    inbox: emails.filter(e => e.category === 'inbox' && !e.read).length,
   };
 
   if (!isAuthenticated) {
