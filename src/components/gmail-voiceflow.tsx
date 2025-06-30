@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useCallback } from "react";
-import { Inbox, Send, FileText, Bot, User, BrainCircuit, LogIn, LogOut, Loader, MailWarning } from "lucide-react";
+import { Inbox, Send, FileText, Bot, User, BrainCircuit, LogIn, LogOut, Loader, MailWarning, AlertCircle } from "lucide-react";
 import {
   SidebarProvider,
   Sidebar,
@@ -33,9 +33,10 @@ type EmailCategory = "inbox" | "sent" | "draft";
 
 type GmailVoiceflowProps = {
     isAuthenticated: boolean;
+    authorizationUrl: string;
 }
 
-export default function GmailVoiceflow({ isAuthenticated }: GmailVoiceflowProps) {
+export default function GmailVoiceflow({ isAuthenticated, authorizationUrl }: GmailVoiceflowProps) {
   const [emails, setEmails] = useState<Email[]>([]);
   const [isLoadingEmails, setIsLoadingEmails] = useState(false);
   const [category, setCategory] = useState<EmailCategory>("inbox");
@@ -171,11 +172,21 @@ export default function GmailVoiceflow({ isAuthenticated }: GmailVoiceflowProps)
             <BrainCircuit className="h-12 w-12 text-primary" />
             <h1 className="text-3xl font-bold">Gmail VoiceFlow</h1>
             <p className="text-muted-foreground">Sign in with your Google account to continue</p>
-            <Button asChild>
-                <a href="/api/auth/google/login" className="flex items-center gap-2" target="_top">
-                    <LogIn className="h-4 w-4" /> Sign in with Google
-                </a>
-            </Button>
+            {authorizationUrl ? (
+                <Button asChild>
+                    <a href={authorizationUrl} className="flex items-center gap-2" target="_top">
+                        <LogIn className="h-4 w-4" /> Sign in with Google
+                    </a>
+                </Button>
+            ) : (
+                <Alert variant="destructive" className="max-w-md">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Configuration Error</AlertTitle>
+                    <AlertDescription>
+                        Could not generate Google sign-in link. Please check server logs or ensure environment variables are set.
+                    </AlertDescription>
+                </Alert>
+            )}
         </div>
     );
   }
