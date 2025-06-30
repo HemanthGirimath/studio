@@ -40,9 +40,9 @@ export async function GET(request: NextRequest) {
         <head>
           <title>Authentication Successful</title>
           <script>
-            // Notify the main window to reload and then close this popup
+            // Notify the main window to re-navigate and then close this popup
             if (window.opener) {
-              window.opener.location.reload();
+              window.opener.location.href = '/';
             }
             window.close();
           </script>
