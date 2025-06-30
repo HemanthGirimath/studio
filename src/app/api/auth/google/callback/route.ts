@@ -1,7 +1,6 @@
 import { createSession } from '@/lib/session';
 import { google } from 'googleapis';
-import { redirect } from 'next/navigation';
-import type { NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -10,7 +9,7 @@ export async function GET(request: NextRequest) {
   if (!code) {
     // Handle error: No code provided
     console.error('No code provided by Google');
-    return redirect('/?error=auth_failed_no_code');
+    return NextResponse.json({ error: 'Authentication failed: No code provided.' }, { status: 400 });
   }
 
   const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, AUTH_URL } = process.env;
@@ -35,9 +34,52 @@ export async function GET(request: NextRequest) {
 
     await createSession(tokens.access_token);
 
-    return redirect('/');
+    const responseHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Authentication Successful</title>
+          <script>
+            // Notify the main window to reload and then close this popup
+            if (window.opener) {
+              window.opener.location.reload();
+            }
+            window.close();
+          </script>
+        </head>
+        <body>
+          <p>Authentication successful! You can close this window.</p>
+        </body>
+      </html>
+    `;
+    
+    return new NextResponse(responseHtml, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/html',
+      },
+    });
+
   } catch (error) {
     console.error('Failed to exchange code for token:', error);
-    return redirect('/?error=auth_failed_token_exchange');
+     const errorHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Authentication Failed</title>
+        </head>
+        <body>
+          <h1>Authentication Failed</h1>
+          <p>Sorry, we were unable to sign you in. Please try again.</p>
+          <p>Error: ${error instanceof Error ? error.message : "Unknown error"}</p>
+        </body>
+      </html>
+    `;
+     return new NextResponse(errorHtml, {
+      status: 500,
+      headers: {
+        'Content-Type': 'text/html',
+      },
+    });
   }
 }

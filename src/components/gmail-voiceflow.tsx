@@ -173,10 +173,11 @@ export default function GmailVoiceflow({ isAuthenticated, authorizationUrl }: Gm
             <h1 className="text-3xl font-bold">Gmail VoiceFlow</h1>
             <p className="text-muted-foreground">Sign in with your Google account to continue</p>
             {authorizationUrl ? (
-                <Button asChild>
-                    <a href={authorizationUrl} className="flex items-center gap-2" target="_top">
-                        <LogIn className="h-4 w-4" /> Sign in with Google
-                    </a>
+                <Button
+                    onClick={() => window.open(authorizationUrl, '_blank', 'noopener,noreferrer,width=500,height=600')}
+                    className="flex items-center gap-2"
+                >
+                    <LogIn className="h-4 w-4" /> Sign in with Google
                 </Button>
             ) : (
                 <Alert variant="destructive" className="max-w-md">
