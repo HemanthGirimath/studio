@@ -1,3 +1,4 @@
+
 import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
 import type { NextAuthConfig } from 'next-auth';
@@ -9,7 +10,7 @@ declare module 'next-auth' {
   }
 }
 
-declare module 'next-auth/jwt' {
+declare module '@auth/core/jwt' {
   interface JWT {
     accessToken?: string;
   }
@@ -41,11 +42,15 @@ export const config: NextAuthConfig = {
     },
     async session({ session, token }) {
       // Send properties to the client, like an access_token from a provider.
-      session.accessToken = token.accessToken;
+      if (token.accessToken) {
+        session.accessToken = token.accessToken;
+      }
       return session;
     },
   },
   // The secret is read automatically from the AUTH_SECRET environment variable.
+  // trustHost is set to true to trust the deployment host.
+  trustHost: true,
 };
 
 export const {
