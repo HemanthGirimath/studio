@@ -48,16 +48,31 @@ export default function GmailVoiceflow({ isAuthenticated }: GmailVoiceflowProps)
 
   useEffect(() => {
     if (isAuthenticated) {
-        setIsLoadingEmails(true);
-        fetchEmails()
-            .then(fetchedEmails => {
-                setEmails(fetchedEmails);
-                if (fetchedEmails.length > 0) {
-                    const firstInbox = fetchedEmails.find(e => e.category === 'inbox');
-                    if(firstInbox) setSelectedEmailId(firstInbox.id);
-                }
-            })
-            .finally(() => setIsLoadingEmails(false));
+      setIsLoadingEmails(true);
+      fetchEmails()
+        .then(response => {
+          if (response.error) {
+            console.error("Error fetching emails:", response.error);
+            // Unauthorized or other fetch error, force a sign out/reload on the client.
+            // Using window.location.href ensures a full page reload, which will
+            // clear all state and re-evaluate authentication status.
+            window.location.href = '/';
+            return;
+          }
+
+          if (response.emails) {
+            setEmails(response.emails);
+            if (response.emails.length > 0) {
+              const firstInbox = response.emails.find(e => e.category === 'inbox');
+              if (firstInbox) setSelectedEmailId(firstInbox.id);
+            }
+          }
+        })
+        .catch(err => {
+          console.error("An unexpected error occurred while fetching emails:", err);
+          window.location.href = '/';
+        })
+        .finally(() => setIsLoadingEmails(false));
     }
   }, [isAuthenticated]);
 

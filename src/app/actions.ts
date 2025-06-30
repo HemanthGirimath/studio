@@ -42,11 +42,11 @@ function getHeader(headers: any[], name: string): string {
     return '';
 }
 
-export async function fetchEmails(): Promise<Email[]> {
+export async function fetchEmails(): Promise<{ emails?: Email[], error?: string }> {
     const session = await getSession();
     if (!session?.accessToken) {
         console.log("No access token found in session.");
-        return [];
+        return { error: 'unauthorized' };
     }
     const accessToken = session.accessToken;
     const headers = { Authorization: `Bearer ${accessToken}` };
@@ -59,17 +59,18 @@ export async function fetchEmails(): Promise<Email[]> {
             const errorData = await listResponse.json();
             console.error('Failed to fetch email list:', listResponse.status, errorData);
             if (listResponse.status === 401) {
-                // Token likely expired, clear session and force re-login
-                await signOutAction();
+                // Token likely expired, clear session and signal client to redirect
+                cookies().delete('session');
+                return { error: 'unauthorized' };
             }
-            return [];
+            return { error: 'fetch_failed' };
         }
         const listData = await listResponse.json();
         const messages = listData.messages || [];
 
         if (!messages.length) {
             console.log('No new messages found.');
-            return [];
+            return { emails: [] };
         }
 
         // 2. Fetch each message
@@ -116,14 +117,14 @@ export async function fetchEmails(): Promise<Email[]> {
         });
 
         const emails = (await Promise.all(emailPromises)).filter(Boolean) as Email[];
-        return emails.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        return { emails: emails.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) };
     } catch (error) {
         console.error('An error occurred in fetchEmails:', error);
         if (error instanceof Error) {
             console.error('Error name:', error.name);
             console.error('Error message:', error.message);
         }
-        return [];
+        return { error: 'unknown' };
     }
 }
 

@@ -18,6 +18,21 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value:
+              "default-src 'self'; script-src 'self' 'unsafe-eval' 'sha256-GgHDqYsuIaU7oECTfPhsmxnbWSzZQ+EMDbVlVY36c04=' https: http://localhost:* blob: 'unsafe-inline';",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
+
