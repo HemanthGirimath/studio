@@ -40,8 +40,6 @@ export async function GET(request: NextRequest) {
         <head>
           <title>Authentication Successful</title>
           <script>
-            // The main window is polling for this window to close.
-            // All we need to do is close it.
             window.close();
           </script>
         </head>

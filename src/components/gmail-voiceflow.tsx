@@ -45,6 +45,8 @@ export default function GmailVoiceflow({ isAuthenticated, authorizationUrl }: Gm
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [isProcessingCommand, setIsProcessingCommand] = useState(false);
   const [conversationContext, setConversationContext] = useState("");
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authPopup, setAuthPopup] = useState<Window | null>(null);
   const { transcript, isListening, startListening, stopListening, speak, setTranscript, cancelSpeech } = useSpeech();
 
   useEffect(() => {
@@ -76,6 +78,22 @@ export default function GmailVoiceflow({ isAuthenticated, authorizationUrl }: Gm
         .finally(() => setIsLoadingEmails(false));
     }
   }, [isAuthenticated]);
+
+
+  const filteredEmails = useMemo(
+  () => emails.filter((email) => email.category === category),
+  [emails, category]
+);
+
+
+const unreadCounts = useMemo(() => {
+  return {
+    inbox: emails.filter(e => e.category === 'inbox' && !e.read).length,
+    sent: emails.filter(e => e.category === 'sent' && !e.read).length,
+    draft: emails.filter(e => e.category === 'draft' && !e.read).length,
+  };
+}, [emails]);
+
 
 
   const handleVoiceButtonClick = () => {
@@ -160,24 +178,26 @@ export default function GmailVoiceflow({ isAuthenticated, authorizationUrl }: Gm
   }, [isListening, transcript, handleCommand, setTranscript]);
 
   const handleSignIn = () => {
-    const popup = window.open(authorizationUrl, '_blank', 'noopener,noreferrer,width=500,height=600');
-    if (popup) {
-      const timer = setInterval(() => {
-        try {
-          if (popup.closed) {
-            clearInterval(timer);
-            // Force a hard navigation to the root of the site.
-            // This is more reliable than reload() in an iframe.
-            window.location.href = '/';
-          }
-        } catch (error) {
-          // This error is expected when the popup navigates to a cross-origin domain (Google).
-          // We can safely ignore it and continue polling. The `popup.closed` check will
-          // work correctly once the popup has actually closed.
-        }
-      }, 500); // Check every 500ms
-    }
+    console.log("handleSignIn: Opening Google authentication popup.");
+    const popup = window.open(authorizationUrl, '_blank', 'noreferrer,width=500,height=600');
+    setAuthPopup(popup);
   };
+
+  useEffect(() => {
+    if (!authPopup) return;
+
+    const timer = setInterval(() => {
+      if (authPopup.closed) {
+        clearInterval(timer);
+        console.log("Auth popup closed. Reloading window.");
+        window.location.reload();
+      }
+    }, 500);
+
+    return () => {
+      clearInterval(timer);
+    };
+  }, [authPopup]);
 
   if (!isAuthenticated) {
     return (
@@ -201,6 +221,7 @@ export default function GmailVoiceflow({ isAuthenticated, authorizationUrl }: Gm
                     </AlertDescription>
                 </Alert>
             )}
+            {authError && <div style={{ color: 'red' }}>{authError}</div>}
         </div>
     );
   }
