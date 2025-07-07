@@ -19,7 +19,7 @@ type EmailListProps = {
 
 export function EmailList({ emails, selectedEmailId, isLoading, onSelectEmail, category }: EmailListProps) {
   return (
-    <aside className="w-full max-w-sm border-r h-full flex flex-col bg-red">
+    <aside className="w-[384px] border-r flex flex-col">
       <div className="p-4 border-b">
         <h2 className="text-2xl font-bold capitalize">{category}</h2>
       </div>

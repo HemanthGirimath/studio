@@ -1,33 +1,20 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useCallback } from "react";
-import { Inbox, Send, FileText, Bot, User, BrainCircuit, LogIn, LogOut, Loader, MailWarning, AlertCircle } from "lucide-react";
 import {
   SidebarProvider,
-  Sidebar,
-  SidebarHeader,
-  SidebarContent,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
   SidebarInset,
-  SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
-import { VoiceButton } from "@/components/voice-button";
 import { useSpeech } from "@/hooks/use-speech";
 import { summarizeEmail } from "@/ai/flows/summarize-email";
 import { contextualResponse } from "@/ai/flows/contextual-responses";
-import { cn } from "@/lib/utils";
-import { fetchEmails, signOutAction } from "@/app/actions";
+import { fetchEmails } from "@/app/actions";
 import type { Email } from "@/app/types";
+import { EmailSidebar } from "./gmail/EmailSidebar";
+import { EmailList } from "./gmail/EmailList";
+import { EmailDetail } from "./gmail/EmailDetail";
+import { LoginView } from "./gmail/LoginView";
+import { VoiceControl } from "./gmail/VoiceControl";
 
 type EmailCategory = "inbox" | "sent" | "draft";
 
@@ -201,198 +188,47 @@ const unreadCounts = useMemo(() => {
 
   if (!isAuthenticated) {
     return (
-        <div className="flex h-screen w-full flex-col items-center justify-center gap-4 bg-red">
-            <BrainCircuit className="h-12 w-12 text-primary" />
-            <h1 className="text-3xl font-bold text-red">Gmail VoiceFlow</h1>
-            <p className="text-muted-foreground">Sign in with your Google account to continue</p>
-            {authorizationUrl ? (
-                <Button
-                    onClick={handleSignIn}
-                    className="flex items-center gap-2"
-                >
-                    <LogIn className="h-4 w-4" /> Sign in with Google
-                </Button>
-            ) : (
-                <Alert variant="destructive" className="max-w-md">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Configuration Error</AlertTitle>
-                    <AlertDescription>
-                        Could not generate Google sign-in link. Please check server logs or ensure environment variables are set.
-                    </AlertDescription>
-                </Alert>
-            )}
-            {authError && <div style={{ color: 'red' }}>{authError}</div>}
-        </div>
+      <LoginView 
+        authorizationUrl={authorizationUrl}
+        handleSignIn={handleSignIn}
+        authError={authError}
+      />
     );
   }
 
 
   return (
-    <div className="h-screen w-full bg-background text-foreground overflow-hidden">
+    <div className="h-screen w-full bg-background text-foreground flex flex-col">
       <SidebarProvider>
-        <Sidebar>
-          <SidebarHeader>
-            <div className="flex items-center gap-2 p-2">
-                <BrainCircuit className="h-8 w-8 text-primary" />
-                <h1 className="text-xl font-bold">Gmail VoiceFlow</h1>
-            </div>
-          </SidebarHeader>
-          <SidebarContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setCategory("inbox")} isActive={category === "inbox"} tooltip="Inbox">
-                  <Inbox />
-                  <span>Inbox</span>
-                  {unreadCounts.inbox > 0 && <Badge className="ml-auto">{unreadCounts.inbox}</Badge>}
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setCategory("sent")} isActive={category === "sent"} tooltip="Sent" disabled>
-                  <Send />
-                  <span>Sent</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setCategory("draft")} isActive={category === "draft"} tooltip="Drafts" disabled>
-                  <FileText />
-                  <span>Drafts</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarContent>
-          <SidebarFooter>
-            <div className="flex flex-col gap-2 p-2">
-                <div className="text-xs text-muted-foreground p-2 text-center">
-                <p>Use your voice to manage emails.</p>
-                <p>Click the mic to start.</p>
-                </div>
-                <form action={signOutAction}>
-                  <Button variant="outline" type="submit" className="w-full">
-                      <LogOut className="mr-2"/> Sign Out
-                  </Button>
-                </form>
-            </div>
-          </SidebarFooter>
-        </Sidebar>
-
-        <SidebarInset >
-          <div className="flex flex h-full w-full ">
-            <aside className="w-[384px] border-r flex flex-col ">
-              <div className="p-4 border-b">
-                <h2 className="text-2xl font-bold capitalize">{category}</h2>
-              </div>
-              <ScrollArea className="overflow-auto">
-                {isLoadingEmails ? (
-                    <div className="p-2 space-y-2">
-                        {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
-                    </div>
-                ) : filteredEmails.length > 0 ? (
-                    <div className="flex flex-col gap-2 p-2">
-                    {filteredEmails.map((email) => (
-                        <Card
-                        key={email.id}
-                        onClick={() => handleSelectEmail(email.id)}
-                        className={cn(
-                            "cursor-pointer transition-all duration-200 hover:shadow-md",
-                            selectedEmailId === email.id ? "border-primary bg-primary/5" : "bg-card"
-                        )}
-                        >
-                        <CardHeader className="p-4 w-60">
-                            <div className="flex items-center gap-3">
-                            <div className="relative">
-                                <Avatar>
-                                    <AvatarFallback>{email.from.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                {!email.read && <span className="absolute top-0 right-0 block h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-card" />}
-                            </div>
-                            <div className="flex-1 overflow-hidden">
-                                <p className="font-semibold truncate">{email.from}</p>
-                                <p className="text-sm text-muted-foreground truncate">{email.subject}</p>
-                            </div>
-                            <time suppressHydrationWarning className="text-xs text-muted-foreground self-start">{new Date(email.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time>
-                            </div>
-                        </CardHeader>
-                        </Card>
-                    ))}
-                    </div>
-                ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-4">
-                        <MailWarning className="h-10 w-10 mb-2" />
-                        <p className="font-semibold">No emails found</p>
-                        <p className="text-sm">No new emails in the last day.</p>
-                    </div>
-                )}
-              </ScrollArea>
-            </aside>
-            <main className="flex-1 flex flex-col overflow-hidden">
-              {selectedEmail ? (
-                <>
-                  <header className="p-6 border-b flex-shrink-0">
-                    <h2 className="text-3xl font-bold truncate">{selectedEmail.subject}</h2>
-                    <div className="flex items-center gap-4 text-muted-foreground mt-2">
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback>{selectedEmail.from.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <span className="font-medium">{selectedEmail.from}</span>
-                      </div>
-                      <Separator orientation="vertical" className="h-4" />
-                      <time suppressHydrationWarning>{new Date(selectedEmail.date).toLocaleString()}</time>
-                    </div>
-                  </header>
-                  <div className="flex-1 overflow-y-auto">
-                    <div className="p-6 prose prose-stone dark:prose-invert max-w-none text-base leading-relaxed whitespace-pre-wrap font-body">
-                      {selectedEmail.body}
-                    </div>
-                  </div>
-
-                  <footer className="p-6 border-t bg-background space-y-4 flex-shrink-0">
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" onClick={() => handleReadAloud(selectedEmail)}>
-                          <User className="mr-2 h-4 w-4"/> Read Aloud
-                      </Button>
-                      <Button onClick={() => handleSummarize(selectedEmail)} disabled={isLoadingSummary}>
-                          <Bot className="mr-2 h-4 w-4"/> Summarize with AI
-                      </Button>
-                    </div>
-
-                    {isLoadingSummary && (
-                        <div className="space-y-2 pt-2">
-                            <Skeleton className="h-4 w-1/4" />
-                            <Skeleton className="h-4 w-full" />
-                            <Skeleton className="h-4 w-3/4" />
-                        </div>
-                    )}
-                    {aiSummary && (
-                        <Alert className="bg-accent/10 border-accent/50">
-                            <Bot className="h-4 w-4 text-accent" />
-                            <AlertTitle className="text-accent font-bold">AI Summary</AlertTitle>
-                            <AlertDescription>
-                                {aiSummary}
-                            </AlertDescription>
-                        </Alert>
-                    )}
-                  </footer>
-                </>
-              ) : (
-                <div className="flex h-full items-center justify-center text-muted-foreground">
-                  <p>Select an email to read</p>
-                </div>
-              )}
-            </main>
-          </div>
-        </SidebarInset>
-        <VoiceButton 
-            isListening={isListening} 
+        <div className="flex-1 flex flex-row overflow-hidden">
+          <EmailSidebar 
+            category={category}
+            setCategory={setCategory}
+            unreadCounts={unreadCounts}
+          />
+          <main className="flex-1 flex flex-row">
+              <EmailList
+                emails={filteredEmails}
+                isLoading={isLoadingEmails}
+                selectedEmailId={selectedEmailId}
+                onSelectEmail={handleSelectEmail}
+                category={category}
+              />
+              <EmailDetail
+                email={selectedEmail}
+                aiSummary={aiSummary}
+                isLoadingSummary={isLoadingSummary}
+                onSummarize={handleSummarize}
+                onReadAloud={handleReadAloud}
+              />
+          </main>
+        </div>
+        <VoiceControl
+            isListening={isListening}
             isProcessing={isProcessingCommand}
-            onClick={handleVoiceButtonClick} 
+            transcript={transcript}
+            onClick={handleVoiceButtonClick}
         />
-         {isListening && (
-            <div className="fixed bottom-28 right-8 bg-card/80 backdrop-blur-sm p-4 rounded-lg shadow-xl text-center">
-                <p className="text-sm text-muted-foreground">Listening...</p>
-                <p className="font-medium">{transcript || "..."}</p>
-            </div>
-        )}
       </SidebarProvider>
     </div>
   );

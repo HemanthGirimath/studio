@@ -20,11 +20,11 @@ type EmailDetailProps = {
 
 export function EmailDetail({ email, aiSummary, isLoadingSummary, onSummarize, onReadAloud }: EmailDetailProps) {
   return (
-    <main className="bg-red">
+    <main className="flex-1 flex flex-col">
       {email ? (
         <>
           {/* Fixed Header */}
-          <header className="p-6 border-b shrink-0 bg-red">
+          <header className="p-6 border-b shrink-0">
             <h2 className="text-3xl font-bold truncate">{email.subject}</h2>
             <div className="flex items-center gap-4 text-muted-foreground mt-2">
               <div className="flex items-center gap-2">
@@ -39,14 +39,14 @@ export function EmailDetail({ email, aiSummary, isLoadingSummary, onSummarize, o
           </header>
 
           {/* Scrollable Body */}
-          <div className=" ">
+          <ScrollArea className="flex-1">
             <div className="p-6 prose prose-stone dark:prose-invert max-w-none text-base leading-relaxed whitespace-pre-wrap font-body">
               {email.body}
             </div>
-          </div>
+          </ScrollArea>
 
           {/* Fixed Footer */}
-          <footer className="">
+          <footer className="p-6 border-t bg-background space-y-4 shrink-0">
             <div className="flex items-center gap-2">
               <Button variant="outline" onClick={() => onReadAloud(email)} className="flex-1 sm:flex-none">
                 <User className="mr-2 h-4 w-4" /> Read Aloud
