@@ -201,9 +201,9 @@ const unreadCounts = useMemo(() => {
 
   if (!isAuthenticated) {
     return (
-        <div className="flex h-screen w-full flex-col items-center justify-center gap-4 bg-background">
+        <div className="flex h-screen w-full flex-col items-center justify-center gap-4 bg-red">
             <BrainCircuit className="h-12 w-12 text-primary" />
-            <h1 className="text-3xl font-bold">Gmail VoiceFlow</h1>
+            <h1 className="text-3xl font-bold text-red">Gmail VoiceFlow</h1>
             <p className="text-muted-foreground">Sign in with your Google account to continue</p>
             {authorizationUrl ? (
                 <Button
@@ -275,13 +275,13 @@ const unreadCounts = useMemo(() => {
           </SidebarFooter>
         </Sidebar>
 
-        <SidebarInset>
-          <div className="flex h-full">
-            <aside className="w-full max-w-sm border-r h-full flex flex-col">
+        <SidebarInset >
+          <div className="flex flex h-full w-full ">
+            <aside className="w-[384px] border-r flex flex-col ">
               <div className="p-4 border-b">
                 <h2 className="text-2xl font-bold capitalize">{category}</h2>
               </div>
-              <ScrollArea className="flex-1">
+              <ScrollArea className="overflow-auto">
                 {isLoadingEmails ? (
                     <div className="p-2 space-y-2">
                         {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
@@ -297,7 +297,7 @@ const unreadCounts = useMemo(() => {
                             selectedEmailId === email.id ? "border-primary bg-primary/5" : "bg-card"
                         )}
                         >
-                        <CardHeader className="p-4">
+                        <CardHeader className="p-4 w-60">
                             <div className="flex items-center gap-3">
                             <div className="relative">
                                 <Avatar>
@@ -324,46 +324,47 @@ const unreadCounts = useMemo(() => {
                 )}
               </ScrollArea>
             </aside>
-            <main className="flex-1 h-full flex flex-col">
-              <ScrollArea className="flex-1">
-                {selectedEmail ? (
-                  <div className="p-6 space-y-6">
-                    <header className="space-y-2">
-                      <h2 className="text-3xl font-bold">{selectedEmail.subject}</h2>
-                      <div className="flex items-center gap-4 text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback>{selectedEmail.from.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <span>{selectedEmail.from}</span>
-                        </div>
-                        <Separator orientation="vertical" className="h-4" />
-                        <time suppressHydrationWarning>{new Date(selectedEmail.date).toLocaleString()}</time>
+            <main className="flex-1 flex flex-col overflow-hidden">
+              {selectedEmail ? (
+                <>
+                  <header className="p-6 border-b flex-shrink-0">
+                    <h2 className="text-3xl font-bold truncate">{selectedEmail.subject}</h2>
+                    <div className="flex items-center gap-4 text-muted-foreground mt-2">
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback>{selectedEmail.from.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{selectedEmail.from}</span>
                       </div>
-                    </header>
-                    <Separator />
-                    <div className="prose prose-stone dark:prose-invert max-w-none text-base leading-relaxed whitespace-pre-wrap font-body">
+                      <Separator orientation="vertical" className="h-4" />
+                      <time suppressHydrationWarning>{new Date(selectedEmail.date).toLocaleString()}</time>
+                    </div>
+                  </header>
+                  <div className="flex-1 overflow-y-auto">
+                    <div className="p-6 prose prose-stone dark:prose-invert max-w-none text-base leading-relaxed whitespace-pre-wrap font-body">
                       {selectedEmail.body}
                     </div>
-                    <Separator />
-                     <div className="flex items-center gap-2 pt-4">
-                        <Button variant="outline" onClick={() => handleReadAloud(selectedEmail)}>
-                            <User className="mr-2 h-4 w-4"/> Read Aloud
-                        </Button>
-                        <Button onClick={() => handleSummarize(selectedEmail)} disabled={isLoadingSummary}>
-                            <Bot className="mr-2 h-4 w-4"/> Summarize with AI
-                        </Button>
+                  </div>
+
+                  <footer className="p-6 border-t bg-background space-y-4 flex-shrink-0">
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" onClick={() => handleReadAloud(selectedEmail)}>
+                          <User className="mr-2 h-4 w-4"/> Read Aloud
+                      </Button>
+                      <Button onClick={() => handleSummarize(selectedEmail)} disabled={isLoadingSummary}>
+                          <Bot className="mr-2 h-4 w-4"/> Summarize with AI
+                      </Button>
                     </div>
 
                     {isLoadingSummary && (
-                        <div className="space-y-2 pt-4">
+                        <div className="space-y-2 pt-2">
                             <Skeleton className="h-4 w-1/4" />
                             <Skeleton className="h-4 w-full" />
                             <Skeleton className="h-4 w-3/4" />
                         </div>
                     )}
                     {aiSummary && (
-                        <Alert className="mt-4 bg-accent/10 border-accent/50">
+                        <Alert className="bg-accent/10 border-accent/50">
                             <Bot className="h-4 w-4 text-accent" />
                             <AlertTitle className="text-accent font-bold">AI Summary</AlertTitle>
                             <AlertDescription>
@@ -371,13 +372,13 @@ const unreadCounts = useMemo(() => {
                             </AlertDescription>
                         </Alert>
                     )}
-                  </div>
-                ) : (
-                  <div className="flex h-full items-center justify-center text-muted-foreground">
-                    <p>Select an email to read</p>
-                  </div>
-                )}
-              </ScrollArea>
+                  </footer>
+                </>
+              ) : (
+                <div className="flex h-full items-center justify-center text-muted-foreground">
+                  <p>Select an email to read</p>
+                </div>
+              )}
             </main>
           </div>
         </SidebarInset>
