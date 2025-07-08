@@ -3,12 +3,9 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   SidebarProvider,
-  SidebarInset,
 } from "@/components/ui/sidebar";
 import { useSpeech } from "@/hooks/use-speech";
-import { summarizeEmail } from "@/ai/flows/summarize-email";
-import { contextualResponse } from "@/ai/flows/contextual-responses";
-import { fetchEmails } from "@/app/actions";
+import { fetchEmails, summarizeEmailAction, contextualResponseAction } from "@/app/actions";
 import type { Email } from "@/app/types";
 import { EmailSidebar } from "./gmail/EmailSidebar";
 import { EmailList } from "./gmail/EmailList";
@@ -99,7 +96,7 @@ const unreadCounts = useMemo(() => {
     setAiSummary(null);
     try {
       speak("Summarizing the email for you.");
-      const result = await summarizeEmail({ emailContent: email.body });
+      const result = await summarizeEmailAction(email.body);
       setAiSummary(result.summary);
       speak(`Here is the summary: ${result.summary}`);
     } catch (error) {
@@ -146,7 +143,7 @@ const unreadCounts = useMemo(() => {
     setIsProcessingCommand(true);
     try {
         const contextForAI = selectedEmail ? `Current email context: Subject: ${selectedEmail.subject}, Body: ${selectedEmail.body}\n\n${conversationContext}` : conversationContext;
-        const result = await contextualResponse({ query: command, context: contextForAI });
+        const result = await contextualResponseAction(command, contextForAI);
         speak(result.response);
         setConversationContext(result.updatedContext);
     } catch (error) {

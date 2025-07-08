@@ -4,6 +4,8 @@ import type { Email } from '@/app/types';
 import { getSession } from '@/lib/session';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { summarizeEmail } from '@/ai/flows/summarize-email';
+import { contextualResponse } from '@/ai/flows/contextual-responses';
 
 // Helper to decode base64url
 function base64UrlDecode(data: string) {
@@ -20,15 +22,18 @@ function getHeader(headers: any[], name: string): string {
     // Decode RFC 2047 encoded strings
     if (header?.value) {
         try {
-            return header.value.replace(/\?=/g, '?=\n').split('\n').map(part => {
+            return header.value.replace(/\?=/g, '?=\n').split('\n').map((part: string) => {
                 if (!part.startsWith('=?') || !part.endsWith('?=')) return part;
                 try {
-                    const [,, charset, encoding, encodedText] = part.match(/=\?([^?]+)\?([QB])\?([^?]+)\?=/i) || [];
+                    const match = part.match(/=\?([^?]+)\?([QB])\?([^?]+)\?=/i);
+                    if (!match) return part;
+
+                    const [, charset, encoding, encodedText] = match;
                     if (encoding.toUpperCase() === 'B') {
-                        return Buffer.from(encodedText, 'base64').toString(charset.toLowerCase());
+                        return Buffer.from(encodedText, 'base64').toString(charset as BufferEncoding);
                     }
                     if (encoding.toUpperCase() === 'Q') {
-                         return encodedText.replace(/_/g, ' ').replace(/=([0-9A-F]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+                         return encodedText.replace(/_/g, ' ').replace(/=([0-9A-F]{2})/g, (_: any, hex: string) => String.fromCharCode(parseInt(hex, 16)));
                     }
                     return part; // fallback
                 } catch {
@@ -53,14 +58,16 @@ export async function fetchEmails(): Promise<{ emails?: Email[], error?: string 
     
     try {
         // 1. Get list of message IDs
-        const listResponse = await fetch('https://www.googleapis.com/gmail/v1/users/me/messages?maxResults=30&q=in:inbox%20newer_than:1d', { headers });
+        const listResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=30&q=in:inbox%20newer_than:1d', { headers });
 
         if (!listResponse.ok) {
             const errorData = await listResponse.json();
             console.error('Failed to fetch email list:', listResponse.status, errorData);
             if (listResponse.status === 401) {
                 // Token likely expired, clear session and signal client to redirect
-                cookies().delete('session');
+                (await
+                    // Token likely expired, clear session and signal client to redirect
+                    cookies()).delete('session');
                 return { error: 'unauthorized' };
             }
             return { error: 'fetch_failed' };
@@ -76,7 +83,7 @@ export async function fetchEmails(): Promise<{ emails?: Email[], error?: string 
         // 2. Fetch each message
         const emailPromises = messages.map(async (message: { id: string }) => {
             if (!message.id) return null;
-            const msgResponse = await fetch(`https://www.googleapis.com/gmail/v1/users/me/messages/${message.id}?format=full`, { headers });
+            const msgResponse = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${message.id}?format=full`, { headers });
             
             if (!msgResponse.ok) {
                 console.error(`Failed to fetch email ${message.id}:`, msgResponse.status);
@@ -96,7 +103,7 @@ export async function fetchEmails(): Promise<{ emails?: Email[], error?: string 
 
             let body = '';
             if (payload.parts) {
-                const part = payload.parts.find(p => p.mimeType === 'text/plain');
+                const part = payload.parts.find((p: { mimeType: string; }) => p.mimeType === 'text/plain');
                 if (part?.body?.data) {
                     body = base64UrlDecode(part.body.data);
                 }
@@ -110,11 +117,11 @@ export async function fetchEmails(): Promise<{ emails?: Email[], error?: string 
                 to,
                 subject,
                 body,
-                date: new Date(parseInt(internalDate, 10)).toISOString(),
+           date: new Date(parseInt(internalDate, 10)).toString(),
                 category: 'inbox' as const,
                 read: isRead,
             };
-        });
+        }); 
 
         const emails = (await Promise.all(emailPromises)).filter(Boolean) as Email[];
         return { emails: emails.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) };
@@ -129,6 +136,14 @@ export async function fetchEmails(): Promise<{ emails?: Email[], error?: string 
 }
 
 export async function signOutAction() {
-    cookies().delete('session');
+    (await cookies()).delete('session');
     redirect('/');
+}
+
+export async function summarizeEmailAction(emailContent: string) {
+    return await summarizeEmail({ emailContent });
+}
+
+export async function contextualResponseAction(query: string, context: string) {
+    return await contextualResponse({ query, context });
 }
