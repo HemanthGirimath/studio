@@ -144,6 +144,16 @@ export async function summarizeEmailAction(emailContent: string) {
     return await summarizeEmail({ emailContent });
 }
 
-export async function contextualResponseAction(query: string, context: string) {
-    return await contextualResponse({ query, context });
+export async function contextualResponseAction(
+  query: string,
+  context: string,
+  emailMetadata: {
+    id: string;
+    from: string;
+    subject: string;
+    date: string;
+    snippet: string;
+  }[]
+) {
+  return await contextualResponse({ query, context, emailMetadata });
 }

@@ -142,8 +142,19 @@ const unreadCounts = useMemo(() => {
 
     setIsProcessingCommand(true);
     try {
-        const contextForAI = selectedEmail ? `Current email context: Subject: ${selectedEmail.subject}, Body: ${selectedEmail.body}\n\n${conversationContext}` : conversationContext;
-        const result = await contextualResponseAction(command, contextForAI);
+        const contextForAI = selectedEmail ? `Current email context: Subject: ${selectedEmail.subject}, Body: ${selectedEmail.body.substring(0, 100)}
+
+${conversationContext}` : conversationContext;
+        
+        const emailMetadata = emails.map(e => ({
+            id: e.id,
+            from: e.from,
+            subject: e.subject,
+            date: e.date,
+            snippet: e.body.substring(0, 100), // Pass a short snippet
+        }));
+
+        const result = await contextualResponseAction(command, contextForAI, emailMetadata);
         speak(result.response);
         setConversationContext(result.updatedContext);
     } catch (error) {
@@ -152,7 +163,7 @@ const unreadCounts = useMemo(() => {
     } finally {
         setIsProcessingCommand(false);
     }
-  }, [selectedEmail, handleReadAloud, handleSummarize, speak, conversationContext, cancelSpeech]);
+  }, [emails, selectedEmail, handleReadAloud, handleSummarize, speak, conversationContext, cancelSpeech]);
 
   useEffect(() => {
     if (!isListening && transcript) {
