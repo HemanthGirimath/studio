@@ -3,6 +3,8 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   SidebarProvider,
+  SidebarInset,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { useSpeech } from "@/hooks/use-speech";
 import { fetchEmails, summarizeEmailAction, contextualResponseAction } from "@/app/actions";
@@ -214,22 +216,27 @@ ${conversationContext}` : conversationContext;
             setCategory={setCategory}
             unreadCounts={unreadCounts}
           />
-          <main className="flex-1 flex flex-row">
-              <EmailList
-                emails={filteredEmails}
-                isLoading={isLoadingEmails}
-                selectedEmailId={selectedEmailId}
-                onSelectEmail={handleSelectEmail}
-                category={category}
-              />
-              <EmailDetail
-                email={selectedEmail}
-                aiSummary={aiSummary}
-                isLoadingSummary={isLoadingSummary}
-                onSummarize={handleSummarize}
-                onReadAloud={handleReadAloud}
-              />
-          </main>
+          <SidebarInset className="flex flex-col">
+            <header className="p-2 border-b">
+              <SidebarTrigger />
+            </header>
+            <main className="flex-1 flex flex-row min-h-0">
+                <EmailList
+                  emails={filteredEmails}
+                  isLoading={isLoadingEmails}
+                  selectedEmailId={selectedEmailId}
+                  onSelectEmail={handleSelectEmail}
+                  category={category}
+                />
+                <EmailDetail
+                  email={selectedEmail}
+                  aiSummary={aiSummary}
+                  isLoadingSummary={isLoadingSummary}
+                  onSummarize={handleSummarize}
+                  onReadAloud={handleReadAloud}
+                />
+            </main>
+          </SidebarInset>
         </div>
         <VoiceControl
             isListening={isListening}
